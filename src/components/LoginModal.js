@@ -1,23 +1,16 @@
-// src/components/LoginModal.js
-import React, { useEffect, useContext, useState } from "react";
+import React, { useContext } from "react";
 import {
   Modal,
   Box,
   TextField,
   Button,
-  // Typography,
-  // Alert,
+  Typography,
+  Alert,
 } from "@mui/material";
-// import axios from 'axios';
-// import { useCookies } from "react-cookie";
 import { LoginContext } from "../App.js";
-
-const axios = require("axios");
+import axios from "axios";
 
 function LoginModal({ open, handleClose }) {
-  // const [username, setUsername] = useState("");
-  // const [password, setPassword] = useState("");
-  // const [loginMessage, setLoginMessage] = useState("Login Failed");
 
   const {
     url,
@@ -26,16 +19,31 @@ function LoginModal({ open, handleClose }) {
     password,
     setPassword,
     // userData,
-    // showLoginError,
-    // showLoginSuccess,
-    // showCreateUserSuccess,
-    // loginMessage,
+    showLoginError,
+    showLoginSuccess,
+    showCreateUserSuccess,
+    loginMessage,
     loginUser,
-    // setShowLoginError,
-    // setShowLoginSuccess,
-    // setShowCreateUserSuccess,
-    // setMessageText,
+    setShowLoginError,
+    setShowLoginSuccess,
+    setShowCreateUserSuccess,
+    setLoginMessage,
   } = useContext(LoginContext);
+
+  const modalStyle = {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    width: 400,
+    bgcolor: "background.paper",
+    boxShadow: 24,
+    p: 4,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: 2,
+  };
 
   async function createUserAccount(username, password) {
     axios({
@@ -48,44 +56,24 @@ function LoginModal({ open, handleClose }) {
     })
       .then((res) => {
         if (res) {
-          // setMessageText(res.data.message)
-          // setShowCreateUserSuccess(true)
-          // setShowLoginError(false)
-          // setShowLoginSuccess(false)
+          setLoginMessage(res.data.message);
+          setShowCreateUserSuccess(true);
+          setShowLoginError(false);
+          setShowLoginSuccess(false);
         }
       })
-      .catch((e) => {
-        // setMessageText('USERNAME IS ALREADY IN USE')
-        // setShowCreateUserSuccess(false)
-        // setShowLoginError(true)
-        // setShowLoginSuccess(false)
+      .catch((err) => {
+        setLoginMessage(err.response.data.message);
+        setShowCreateUserSuccess(false);
+        setShowLoginError(true);
+        setShowLoginSuccess(false);
       });
   }
-
-  const handleLogin = (e) => {
-    // setShowLoginError(false)
+  const handleFormSubmit = (e) => {
+    setShowLoginError(false);
     e.preventDefault();
-    // let password = passwordRaw;
-    // let username = usernameInput;
     loginUser(username, password);
   };
-  // const handleLogin = () => {
-  //   axios.post('/login', { username, password })
-  //     .then(response => {
-  //       setLoginMessage('Login successful');
-  //       Cookies.set('user', username);
-  //       // Handle successful login
-  //     })
-  //     .catch(error => {
-  //       setLoginMessage('Login failed');
-  //       // Handle login error
-  //     });
-  // };
-
-  // const handleSubmit = (e) => {
-  //   e.preventDefault();
-  //   // login(e.target[0].value, e.target[1].value)
-  // }
 
   const submitAccount = (e) => {
     e.preventDefault();
@@ -94,22 +82,36 @@ function LoginModal({ open, handleClose }) {
 
   return (
     <Modal open={open} onClose={handleClose}>
-      <Box>
+      <Box sx={modalStyle} component="form" onSubmit={handleFormSubmit}>
+        <Typography variant="h5"> Inventory Account Login</Typography>
         <TextField
           label="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
+          margin="normal"
+          fullWidth
         />
         <TextField
           label="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           type="password"
+          margin="normal"
+          fullWidth
         />
-        <Button onClick={handleLogin}>Submit</Button>
-        <Button onClick={submitAccount}>Create Account</Button>
+        <Button type="submit" variant="contained" color="primary" fullWidth>
+          Login
+        </Button>
+        <Button
+          ariant="outlined"
+          color="secondary"
+          fullWidth
+          onClick={submitAccount}
+        >
+          Create Account
+        </Button>
         {/* <Typography>{loginMessage}</Typography> */}
-        {/* {showLoginError ? (
+        {showLoginError ? (
           <Alert severity="error">{loginMessage}</Alert>
         ) : (
           <></>
@@ -123,7 +125,7 @@ function LoginModal({ open, handleClose }) {
           <Alert severity="info">{loginMessage}</Alert>
         ) : (
           <></>
-        )} */}
+        )}
       </Box>
     </Modal>
   );

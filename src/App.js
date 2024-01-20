@@ -1,39 +1,47 @@
-import React, { createContext, useState, useEffect, useMemo, useCallback } from "react";
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 import { Routes, Route } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useCookies } from "react-cookie";
-// import axios from 'axios';
 import Home from "./components/Home";
 import Profile from "./components/Profile";
 import Inventory from "./components/Inventory";
 import NavBar from "./components/NavBar";
-import LoginModal from "./components/LoginModal"; // Import the login modal component
+import LoginModal from "./components/LoginModal";
 import "./App.css";
+import axios from "axios";
 
 export const LoginContext = createContext();
-// export const LoginFunctionsContext = createContext();
 export const BlogContext = createContext();
 
-const axios = require("axios");
-
 function App() {
+  // const url = "http://localhost:8080";
   const dev = process.env.NODE_ENV !== "production";
+  // for Heroku:
   const url = dev
     ? `http://localhost:${process.env.REACT_APP_PORT}`
-    : "https://your-production-url.com";
+    : "https://CRUD-server.herokuapp.com";
+  // const url = dev ? 'http://localhost:8080' : 'https://CRUD-server.herokuapp.com';
 
   const [loggedIn, setLoggedIn] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
-  const [userData, setUserData] = useState('')
+  const [userData, setUserData] = useState(null);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [users, setUsers] = useState("");
   const [cookies, setCookies, removeCookies] = useCookies([
     "username-cookie",
     "passwordRaw-hash-cookie",
   ]);
-  // const [showLoginError, setShowLoginError] = useState(false);
-  // const [showLoginSuccess, setShowLoginSuccess] = useState(false);
-  // const [showCreateUserSuccess, setShowCreateUserSuccess] = useState(false);
-  // const [loginMessage, setLoginMessage] = useState('')
+  const [showLoginError, setShowLoginError] = useState(false);
+  const [showLoginSuccess, setShowLoginSuccess] = useState(false);
+  const [showCreateUserSuccess, setShowCreateUserSuccess] = useState(false);
+  const [loginMessage, setLoginMessage] = useState("");
 
   const nextMonth = useMemo(() => {
     const now = new Date();
@@ -52,53 +60,42 @@ function App() {
         },
       })
         .then((res) => {
-          if (res) {
-            let hashedPassword = res.data;
+          if (res.data) {
+            setUserData(res.data.user);
+            setLoggedIn(true);
+            //better to use a token for better security, but this works for now
+            let hashedPassword = res.data.user.hashedPassword;
             setCookies("username-cookie", username, { expires: nextMonth });
-            // !!!!!Change to the hash, hide the raw password!!!!
             setCookies("password-hash-cookie", hashedPassword, {
               expires: nextMonth,
             });
-            // setShowLoginError(false);
-            // setShowLoginSuccess(true);
-            // setShowCreateUserSuccess(false);
-            // !!!!!Change to the hash, hide the raw password!!!!
-            setUserData({
-              username,
-              hashedPassword,
-            });
-            // setLoginMessage("LOGIN SUCCESSFUL");
+            setShowLoginError(false);
+            setShowLoginSuccess(true);
+            setShowCreateUserSuccess(false);
+            setLoginMessage("LOGIN SUCCESSFUL");
           }
         })
-        .catch((e) => {
+        .catch((err) => {
           setCookies("username-cookie", "", { expires: nextMonth });
           setCookies("password-hash-cookie", "", { expires: nextMonth });
-          // setShowLoginError(true);
-          // setShowLoginSuccess(false);
-          // setShowCreateUserSuccess(false);
-          // setLoginMessage("INVALID USERNAME OR PASSWORD");
+          setShowLoginError(true);
+          setShowLoginSuccess(false);
+          setShowCreateUserSuccess(false);
+          setLoginMessage(err.response.data.message);
         });
     },
     [url, nextMonth, setCookies]
   );
 
-  // Logout user function
-  const handleLogout = (e) => {
-    logout();
-  };
-
   function logout() {
     removeCookies("username-cookie");
     removeCookies("passwordRaw-hash-cookie");
-    // setShowCreateUserSuccess(false)
-    // setShowLoginError(false)
-    // setShowLoginSuccess(false)
-    // setUserData();
+    setShowCreateUserSuccess(false);
+    setShowLoginError(false);
+    setShowLoginSuccess(false);
+    setUserData(null);
+    setLoggedIn(false);
   }
-  // const logoutUser = useCallback(() => {
-  //   removeCookie("user-cookie");
-  //   setLoggedIn(false);
-  // }, [removeCookie]);
 
   // // Handle login modal toggle
   const toggleLoginModal = () => {
@@ -106,35 +103,6 @@ function App() {
   };
 
   // Check if user is already logged in via cookies
-  useEffect(() => {
-    if (cookies["user-cookie"]) {
-      setLoggedIn(true);
-    }
-  }, [cookies]);
-
-  const loginContext = {
-    url,
-    cookies,
-    username,
-    password,
-    // userData,
-    // showLoginError,
-    // showLoginSuccess,
-    // showCreateUserSuccess,
-    // loginMessage,
-    // setUserData,
-    setUsername,
-    setPassword,
-    loginUser,
-    setCookies,
-    removeCookies,
-    // setShowLoginError,
-    // setShowLoginSuccess,
-    // setShowCreateUserSuccess,
-    // setLoginMessage
-  };
-
-  // login with cookies
   useEffect(() => {
     let username = cookies["username-cookie"];
     let hashedPassword = cookies["password-hash-cookie"];
@@ -144,13 +112,48 @@ function App() {
     }
   }, [cookies, loginUser]);
 
+  useEffect(() => {
+    const getUsers = async () => {
+      axios.get(`${url}/users`).then((userList) => setUsers(userList.data));
+    };
+    getUsers();
+  }, [url, userData]);
+
+  useEffect(() => {
+    if (userData) {
+      setLoginModalOpen(false);
+    }
+  }, [userData]);
+
+  const loginContext = {
+    url,
+    cookies,
+    username,
+    password,
+    userData,
+    users,
+    showLoginError,
+    showLoginSuccess,
+    showCreateUserSuccess,
+    loginMessage,
+    setUserData,
+    setUsername,
+    setPassword,
+    loginUser,
+    logout,
+    toggleLoginModal,
+    setCookies,
+    removeCookies,
+    setShowLoginError,
+    setShowLoginSuccess,
+    setShowCreateUserSuccess,
+    setLoginMessage,
+  };
+
   return (
     <div className="App">
       <LoginContext.Provider value={loginContext}>
-        <NavBar
-          loggedIn={loggedIn}
-          handleLoginLogout={loggedIn ? logout : toggleLoginModal}
-        />
+        <NavBar loggedIn={loggedIn} />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/profile/:id" element={<Profile />} />
