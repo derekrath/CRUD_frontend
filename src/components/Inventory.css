@@ -4,3 +4,36 @@
   -webkit-appearance: none;
   margin: 0;
 }
+
+.editableTextField {
+  width: 100%;
+}
+
+.editableTextField .MuiInputBase-root {
+  height: 40px;
+}
+
+/* Description column */
+.descriptionCell {
+  max-width: 100px; 
+  white-space: nowrap; 
+  /* white-space not doing anything? */
+  overflow: hidden; 
+  text-overflow: ellipsis;
+}
+
+/* Name Column */
+.nameCell {
+  width: 150px;
+  max-width:150px;
+  white-space: nowrap; 
+  /* white-space not doing anything? */
+  overflow: hidden; 
+  text-overflow: ellipsis;
+}
+
+/* Name Column */
+.otherCell {
+  width: 80px;
+  max-width: 80px;
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useCallback } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   Box,
   Button,
@@ -22,6 +22,22 @@ import EditIcon from "@mui/icons-material/Edit";
 import { LoginContext, InventoryContext } from "../App.js";
 import axios from "axios";
 import "./Inventory.css";
+
+const itemsReducer = (state, action) => {
+  switch (action.type) {
+    case "updateField":
+      return state.map((item) => {
+        if (item.id === action.itemId) {
+          return { ...item, [action.field]: action.value };
+        }
+        return item;
+      });
+    case "setItems":
+      return action.items;
+    default:
+      return state;
+  }
+};
 
 const modalStyle = {
   position: "absolute",
@@ -190,7 +206,9 @@ function Inventory() {
   const [itemSearchResult, setItemSearchResult] = useState(null); // State to store the search result
   // const [editableFields, setEditableFields] = useState({});
   // const [localItemData, setLocalItemData] = useState({ ...itemInfo });
+  const [editModeOn, setEditModeOn] = useState(false);
 
+  const { items, setItems } = useContext(InventoryContext);
   const {
     url,
     userData,
@@ -200,7 +218,6 @@ function Inventory() {
     setShowError,
     setErrorMessage,
   } = useContext(LoginContext);
-  const { items, setItems } = useContext(InventoryContext);
 
   const fetchItems = async () => {
     try {
@@ -268,13 +285,63 @@ function Inventory() {
     }
   };
 
+  const EditableCell = ({ item, field, onChange }) => {
+    if (editModeOn) {
+      return (
+        <TextField
+          size="small"
+          // fullWidth
+          // multiline
+          variant="standard"
+          className="editableTextField"
+          InputProps={{
+            style: {
+              fontSize: "inherit",
+              // height: "100%", // Adjust to fit the row height
+              // lineHeight: "inherit",
+              // padding: "6px 0 7px",
+            },
+          }}
+          value={item[field]}
+          onChange={(e) => onChange(e, item.id, field)}
+        />
+      );
+    }
+    // Apply shortenedDescription only to the description field
+    if (field === "description") {
+      return <>{shortenedDescription(item[field])}</>;
+    }
+    return <>{item[field]}</>;
+  };
+
+  const handleInlineEditChange = (e, itemId, field) => {
+    const updatedItems = items.map((item) => {
+      if (item.id === itemId) {
+        return { ...item, [field]: e.target.value };
+      }
+      return item;
+    });
+    setItems(updatedItems);
+  };
+  // const handleInlineEditChange = (e, itemId, field) => {
+  //   const updatedItems = items.map((item) => {
+  //     if (item.id === itemId) {
+  //       return { ...item, [field]: e.target.value };
+  //     }
+  //     return item;
+  //   });
+  //   // Only update state if there is a change
+  //   if (JSON.stringify(items) !== JSON.stringify(updatedItems)) {
+  //     setItems(updatedItems);
+  //   }
+  // };
+
   const handleEditClick = (item) => {
     setCurrentItem(item);
     setEditModalOpen(true);
   };
 
   const handleUpdateItem = async (updatedItem) => {
-    console.log("updatedItem:", updatedItem, "updatedItem ID:", updatedItem.id);
     try {
       await axios.put(`${url}/items/${updatedItem.id}`, updatedItem);
       setEditModalOpen(false);
@@ -300,36 +367,33 @@ function Inventory() {
       item.id.toString().includes(searchText)
   );
 
-  // const handleAddItem = () => {
-  // console.log("adding new item");
-  // addItem(item.name, item.description, item.quantity);
-  // fetchItems();
-  // };
-
-  // function addItem(name, description, quantity) {
-  //   return axios
-  //     .post(`${url}/items`, { name, description, quantity })
-  //     .then((response) => response.data)
-  //     .catch((error) => {
-  // console.error("Error adding item:", error);
-  // throw error;
-  //     });
-  // }
-
-  // useEffect(() => {}, [items]);
-
-  // useEffect(() => {
-  //   const itemsFromLocalStorage = localStorage.getItem("items");
-  //   if (itemsFromLocalStorage) {
-  //     setItems(JSON.parse(itemsFromLocalStorage));
-  //   }
-  // }, [setItems]);
-
   const shortenedDescription = (description) => {
     if (description.length > 100) {
       return `${description.substring(0, 100)}...`;
     }
     return description;
+  };
+
+  const handleButtonClick = () => {
+    if (editModeOn) {
+      handleBulkUpdate();
+    }
+    setEditModeOn(!editModeOn);
+  };
+
+  const handleBulkUpdate = async () => {
+    if (editModeOn) {
+      try {
+        await axios.put(`${url}/items/bulkupdate`, { items });
+        setEditModeOn(false);
+        fetchItems();
+      } catch (error) {
+        console.error(
+          "Error during bulk update:",
+          error.response ? error.response.data : error
+        );
+      }
+    }
   };
 
   return (
@@ -358,29 +422,33 @@ function Inventory() {
         </Box>
       )}
       {loggedIn ? (
-        <Box display="flex" justifyContent="space-between" margin="20px">
+        <Box display="flex" justifyContent="space-between" margin="0px">
           <Button
             startIcon={<AddIcon />}
             onClick={() => setAddItemModalOpen(true)}
           >
             Add Item
           </Button>
+
+          <AddItemModal
+            showError={showError}
+            errorMessage={errorMessage}
+            open={addItemModalOpen}
+            onClose={() => {
+              setAddItemModalOpen(false);
+              setShowError(false);
+              setErrorMessage("");
+            }}
+            userData={userData}
+            onSaveAdd={handleAddNewItem}
+          />
+          <Button onClick={handleButtonClick}>
+            {editModeOn ? "Close Editor" : "Edit All"}
+          </Button>
         </Box>
       ) : (
         <></>
       )}
-      <AddItemModal
-        showError={showError}
-        errorMessage={errorMessage}
-        open={addItemModalOpen}
-        onClose={() => {
-          setAddItemModalOpen(false);
-          setShowError(false);
-          setErrorMessage("");
-        }}
-        userData={userData}
-        onSaveAdd={handleAddNewItem}
-      />
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -394,11 +462,29 @@ function Inventory() {
           <TableBody>
             {items.filter(filterItems).map((item) => (
               <TableRow key={item.id}>
-                <TableCell>{item.name}</TableCell>
-                <TableCell>{shortenedDescription(item.description)}</TableCell>
-                <TableCell>{item.quantity}</TableCell>
-                <TableCell>
-                  {loggedIn ? (
+                <TableCell className="nameCell">
+                  <EditableCell
+                    item={item}
+                    field="name"
+                    onChange={handleInlineEditChange}
+                  />
+                </TableCell>
+                <TableCell className="descriptionCell">
+                  <EditableCell
+                    item={item}
+                    field="description"
+                    onChange={handleInlineEditChange}
+                  />
+                </TableCell>
+                <TableCell className="otherCell">
+                  <EditableCell
+                    item={item}
+                    field="quantity"
+                    onChange={handleInlineEditChange}
+                  />
+                </TableCell>
+                <TableCell className="otherCell">
+                  {loggedIn && !editModeOn && (
                     <div>
                       <IconButton onClick={() => handleEditClick(item)}>
                         <EditIcon />
@@ -407,8 +493,6 @@ function Inventory() {
                         <DeleteIcon />
                       </IconButton>
                     </div>
-                  ) : (
-                    <></>
                   )}
                 </TableCell>
               </TableRow>

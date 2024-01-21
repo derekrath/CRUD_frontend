@@ -38,7 +38,7 @@ function NavBar({ loggedIn }) {
                 to={"/Inventory"}
                 style={{ textDecoration: "none", color: "white" }}
               >
-                Inventory
+                Check Inventory
               </Link>
             </Button>
           </Box>
