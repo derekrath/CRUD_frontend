@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Box, Typography, Paper, Grid, Button, TextField } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
@@ -8,13 +8,21 @@ import axios from "axios";
 
 function Profile() {
   const navigate = useNavigate();
-  const { userData, setUserData, url, logout } = useContext(LoginContext);
+  const {
+    userData,
+    setUserData,
+    url,
+    // loginUser,
+    logout,
+    // cookies,
+    setLoggedIn,
+  } = useContext(LoginContext);
   const [editableFields, setEditableFields] = useState({});
-  const [localUserData, setLocalUserData] = useState({ ...userData }); // Local state to manage edits
+  const [localUserData, setLocalUserData] = useState({ ...userData });
 
   const handleEditClick = (field) => {
     setEditableFields({ ...editableFields, [field]: true });
-    setLocalUserData({ ...localUserData, [field]: userData[field] }); // Initialize local state with current userData
+    setLocalUserData({ ...localUserData, [field]: userData[field] });
   };
 
   const handleFieldChange = (field, value) => {
@@ -28,7 +36,19 @@ function Profile() {
   };
 
   const updateUserProfile = (updatedUserData) => {
-    setUserData({ ...userData, id: updatedUserData.id });
+    axios
+      .put(`${url}/users/${userData.id}`, {
+        id: userData.id,
+        first_name: updatedUserData.first_name,
+        last_name: updatedUserData.last_name,
+      })
+      .then((response) => {
+        setUserData(response.data);
+        localStorage.setItem("userData", JSON.stringify(response.data));
+      })
+      .catch((err) => {
+        throw new Error(err);
+      });
   };
 
   const handleDeleteAccount = () => {
@@ -38,10 +58,20 @@ function Profile() {
         logout();
         navigate("/");
       })
-      .catch((error) => {
-
+      .catch((err) => {
+        throw new Error(err);
       });
   };
+
+  useEffect(() => {}, [userData]);
+
+  useEffect(() => {
+    const userDataFromLocalStorage = localStorage.getItem("userData");
+    if (userDataFromLocalStorage) {
+      setUserData(JSON.parse(userDataFromLocalStorage));
+      setLoggedIn(true);
+    }
+  }, [setLoggedIn, setUserData]);
 
   return (
     <Box display="flex" justifyContent="center" alignItems="center">
@@ -50,23 +80,32 @@ function Profile() {
           User Profile
         </Typography>
         <Button
-          variant="contained"
+          variant="outlined"
           color="secondary"
           startIcon={<DeleteIcon />}
           onClick={handleDeleteAccount}
-          // style={{ marginTop: "20px" }}
         >
           Delete Account
         </Button>
-        <Grid container spacing={2}>
-          {/* ID Display (Non-editable) */}
+        <Grid container spacing={2} style={{ marginTop: "10px" }}>
           <Grid item xs={12} sm={6}>
             <Paper elevation={2} style={{ padding: "10px", margin: "10px" }}>
               <Typography variant="subtitle1" style={{ fontWeight: "bold" }}>
                 ID:
               </Typography>
               <Typography variant="body1" style={{ marginLeft: "5px" }}>
-                {userData.id}
+                {userData?.id}
+              </Typography>
+            </Paper>
+          </Grid>
+
+          <Grid item xs={12} sm={6}>
+            <Paper elevation={2} style={{ padding: "10px", margin: "10px" }}>
+              <Typography variant="subtitle1" style={{ fontWeight: "bold" }}>
+                Username:
+              </Typography>
+              <Typography variant="body1" style={{ marginLeft: "5px" }}>
+                {userData?.username}
               </Typography>
             </Paper>
           </Grid>
@@ -91,7 +130,7 @@ function Profile() {
                   <TextField
                     fullWidth
                     variant="standard"
-                    value={localUserData.first_name}
+                    value={localUserData.first_name || ""}
                     onChange={(e) =>
                       handleFieldChange("first_name", e.target.value)
                     }
@@ -104,7 +143,7 @@ function Profile() {
                   />
                 ) : (
                   <Typography variant="body1" style={{ marginLeft: "5px" }}>
-                    {userData.first_name}
+                    {userData?.first_name}
                   </Typography>
                 )}
               </div>
@@ -139,7 +178,7 @@ function Profile() {
                   <TextField
                     fullWidth
                     variant="standard"
-                    value={localUserData.last_name}
+                    value={localUserData.last_name || ""}
                     onChange={(e) =>
                       handleFieldChange("last_name", e.target.value)
                     }
@@ -152,7 +191,7 @@ function Profile() {
                   />
                 ) : (
                   <Typography variant="body1" style={{ marginLeft: "5px" }}>
-                    {userData.last_name}
+                    {userData?.last_name}
                   </Typography>
                 )}
               </div>

@@ -110,7 +110,6 @@ function LoginModal({ open, handleClose }) {
         >
           Create Account
         </Button>
-        {/* <Typography>{loginMessage}</Typography> */}
         {showLoginError ? (
           <Alert severity="error">{loginMessage}</Alert>
         ) : (

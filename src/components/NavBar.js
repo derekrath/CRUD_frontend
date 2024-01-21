@@ -32,11 +32,18 @@ function NavBar({ loggedIn }) {
           </Typography>
         </Box>
         <Toolbar>
+          <Box>
+            <Button color="inherit">
+              <Link
+                to={"/Inventory"}
+                style={{ textDecoration: "none", color: "white" }}
+              >
+                Inventory
+              </Link>
+            </Button>
+          </Box>
           <Box flexGrow={1} display="flex" justifyContent="flex-end">
-            <Button
-              color="inherit"
-              disabled={!loggedIn || !userData || !userData.id}
-            >
+            <Button color="inherit">
               <Link
                 to={
                   loggedIn && userData && userData.id
