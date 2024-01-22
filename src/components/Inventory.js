@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useCallback } from "react";
 import {
   Box,
   Button,
@@ -13,7 +13,6 @@ import {
   IconButton,
   Typography,
   Modal,
-  FormGroup,
   Alert,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
@@ -22,22 +21,6 @@ import EditIcon from "@mui/icons-material/Edit";
 import { LoginContext, InventoryContext } from "../App.js";
 import axios from "axios";
 import "./Inventory.css";
-
-const itemsReducer = (state, action) => {
-  switch (action.type) {
-    case "updateField":
-      return state.map((item) => {
-        if (item.id === action.itemId) {
-          return { ...item, [action.field]: action.value };
-        }
-        return item;
-      });
-    case "setItems":
-      return action.items;
-    default:
-      return state;
-  }
-};
 
 const modalStyle = {
   position: "absolute",
@@ -198,14 +181,11 @@ function EditItemModal({
 }
 
 function Inventory() {
-  const [searchText, setSearchText] = useState("");
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [addItemModalOpen, setAddItemModalOpen] = useState(false);
   const [currentItem, setCurrentItem] = useState(null);
-  // const [itemId, setItemId] = useState(""); // State for ID input
-  const [itemSearchResult, setItemSearchResult] = useState(null); // State to store the search result
-  // const [editableFields, setEditableFields] = useState({});
-  // const [localItemData, setLocalItemData] = useState({ ...itemInfo });
+  const [searchTerm, setSearchTerm] = useState(""); // State to store the search result
+  const [searchPerformed, setSearchPerformed] = useState(false); // New state variable
   const [editModeOn, setEditModeOn] = useState(false);
 
   const { items, setItems } = useContext(InventoryContext);
@@ -219,13 +199,36 @@ function Inventory() {
     setErrorMessage,
   } = useContext(LoginContext);
 
-  const fetchItems = async () => {
+  // Original code with warning, probably safe to delete now
+  // const fetchItems = async () => {
+  //   try {
+  //     let fetchedItems;
+  //     const response = await axios.get(`${url}/items`);
+  //     fetchedItems = response.data;
+
+  //     // Filter items based on logged-in user
+  //     if (loggedIn) {
+  //       fetchedItems = fetchedItems.filter(
+  //         (item) => item.user_id === userData.id
+  //       );
+  //     }
+
+  //     setItems(fetchedItems.sort((a, b) => a.name.localeCompare(b.name)));
+  //   } catch (error) {
+  //     console.error("Error:", error.response ? error.response.data : error);
+  //   }
+  // };
+
+  // useEffect(() => {
+  //   fetchItems();
+  // }, [url, userData]);
+
+  const fetchItems = useCallback(async () => {
     try {
       let fetchedItems;
       const response = await axios.get(`${url}/items`);
       fetchedItems = response.data;
 
-      // Filter items based on logged-in user
       if (loggedIn) {
         fetchedItems = fetchedItems.filter(
           (item) => item.user_id === userData.id
@@ -234,41 +237,61 @@ function Inventory() {
 
       setItems(fetchedItems.sort((a, b) => a.name.localeCompare(b.name)));
     } catch (error) {
-      console.error("Error fetching items:", error);
+      console.error("Error:", error.response ? error.response.data : error);
+    }
+  }, [url, userData?.id, loggedIn, setItems]);
+
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
+
+  const fetchItemByName = async (name) => {
+    try {
+      const response = await axios.get(`${url}/items/name/${name}`);
+      setItems(response.data);
+    } catch (error) {
+      console.error("Error:", error.response ? error.response.data : error);
+      setItems([]);
+    }
+    setSearchPerformed(true);
+  };
+
+  const fetchItemById = async (id) => {
+    try {
+      const response = await axios.get(`${url}/items/id/${id}`);
+      setItems([response.data]);
+    } catch (error) {
+      console.error("Error:", error.response ? error.response.data : error);
+      setItems([]);
+    }
+    setSearchPerformed(true);
+  };
+
+  const handleSearch = () => {
+    if (searchTerm.trim() === "") {
+      fetchItems();
+      return;
+    }
+
+    const id = parseInt(searchTerm, 10);
+    if (!isNaN(id)) {
+      fetchItemById(id);
+    } else {
+      fetchItemByName(searchTerm);
     }
   };
 
-  // Call fetchItems on component mount and when the loggedIn status changes
-  useEffect(() => {
+  const handleReset = () => {
+    setSearchPerformed(false);
     fetchItems();
-  }, [url, userData]);
-
-  // const fetchItemById = async (id) => {
-  //   try {
-  //     const response = await axios.get(`${url}/items/${id}`);
-  //     setItemSearchResult(response.data); // Set the search result
-  //   } catch (error) {
-  //     // console.error("Error fetching item by ID:", error);
-  //     setItemSearchResult(null); // Reset the search result on error
-  //   }
-  // };
-
-  // const handleSearchById = () => {
-  //   const id = parseInt(itemId, 10);
-  //   if (!isNaN(id)) {
-  //     fetchItemById(id);
-  //   } else {
-  //     // alert("Please enter a valid number for ID");
-  //   }
-  // };
+  };
 
   const handleDeleteItem = async (itemId) => {
-    console.log(itemId);
     try {
       await axios.delete(`${url}/items/${itemId}`);
       fetchItems();
     } catch (error) {
-      // console.error("Error deleting item:", error);
+      console.error("Error:", error.response ? error.response.data : error);
     }
   };
 
@@ -290,16 +313,11 @@ function Inventory() {
       return (
         <TextField
           size="small"
-          // fullWidth
-          // multiline
           variant="standard"
           className="editableTextField"
           InputProps={{
             style: {
               fontSize: "inherit",
-              // height: "100%", // Adjust to fit the row height
-              // lineHeight: "inherit",
-              // padding: "6px 0 7px",
             },
           }}
           value={item[field]}
@@ -323,18 +341,6 @@ function Inventory() {
     });
     setItems(updatedItems);
   };
-  // const handleInlineEditChange = (e, itemId, field) => {
-  //   const updatedItems = items.map((item) => {
-  //     if (item.id === itemId) {
-  //       return { ...item, [field]: e.target.value };
-  //     }
-  //     return item;
-  //   });
-  //   // Only update state if there is a change
-  //   if (JSON.stringify(items) !== JSON.stringify(updatedItems)) {
-  //     setItems(updatedItems);
-  //   }
-  // };
 
   const handleEditClick = (item) => {
     setCurrentItem(item);
@@ -354,18 +360,12 @@ function Inventory() {
   };
 
   const filterItems = (item) => {
-    const searchTextLower = searchText.toLowerCase();
+    const searchTextLower = searchTerm.toLowerCase();
     return (
       item.name.toLowerCase().includes(searchTextLower) ||
-      (!isNaN(searchText) && item.id === parseInt(searchText))
+      (!isNaN(searchTerm) && item.id === parseInt(searchTerm))
     );
   };
-
-  const filteredItems = items.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      item.id.toString().includes(searchText)
-  );
 
   const shortenedDescription = (description) => {
     if (description.length > 100) {
@@ -398,29 +398,16 @@ function Inventory() {
 
   return (
     <div>
-      <Box display="flex" justifyContent="space-between" margin="20px">
-        {/* <TextField
-          label="Search Inventory by Name"
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          style={{ marginBottom: "20px" }}
-        />
+      <Box display="flex" justifyContent="center" margin="20px">
         <TextField
-          label="Search by ID"
-          value={itemId}
-          onChange={(e) => setItemId(e.target.value)}
+          label="Search by Name or ID"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
           style={{ marginBottom: "20px" }}
         />
-        <Button onClick={handleSearchById}>Search by ID</Button> */}
+        <Button onClick={handleSearch}>Search</Button>
       </Box>
-      {itemSearchResult && (
-        <Box margin="20px">
-          <Typography variant="h6">Search Result:</Typography>
-          <Typography>Name: {itemSearchResult.name}</Typography>
-          <Typography>Description: {itemSearchResult.description}</Typography>
-          <Typography>Quantity: {itemSearchResult.quantity}</Typography>
-        </Box>
-      )}
+      {searchPerformed && <Button onClick={handleReset}>Reset</Button>}
       {loggedIn ? (
         <Box display="flex" justifyContent="space-between" margin="0px">
           <Button
