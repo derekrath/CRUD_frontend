@@ -6,7 +6,6 @@ import React, {
   useCallback,
 } from "react";
 import { Routes, Route } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
 import { useCookies } from "react-cookie";
 import Home from "./components/Home";
 import Profile from "./components/Profile";
@@ -25,7 +24,7 @@ function App() {
   // for Heroku:
   const url = dev
     ? `http://localhost:${process.env.REACT_APP_PORT}`
-    : "https://CRUD-server.herokuapp.com";
+    : "https://crud-backend-ebed6a474f2e.herokuapp.com/";
   // const url = dev ? 'http://localhost:8080' : 'https://CRUD-server.herokuapp.com';
 
   const [items, setItems] = useState([]);
