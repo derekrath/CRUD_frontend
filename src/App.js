@@ -24,7 +24,7 @@ function App() {
   // for Heroku:
   const url = dev
     ? `http://localhost:${process.env.REACT_APP_PORT}`
-    : 'https://crud-backend-ebed6a474f2e.herokuapp.com';
+    : "https://crud-backend-ebed6a474f2e.herokuapp.com";
   // const url = dev ? 'http://localhost:8080' : 'https://CRUD-server.herokuapp.com';
 
   const [items, setItems] = useState([]);
@@ -45,7 +45,7 @@ function App() {
   const [showCreateUserSuccess, setShowCreateUserSuccess] = useState(false);
   const [loginMessage, setLoginMessage] = useState("");
   const [showError, setShowError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState("");
 
   const nextMonth = useMemo(() => {
     const now = new Date();
@@ -66,7 +66,7 @@ function App() {
         .then((res) => {
           if (res.data) {
             setUserData(res.data.user);
-            localStorage.setItem('userData', JSON.stringify(res.data.user));
+            localStorage.setItem("userData", JSON.stringify(res.data.user));
             setLoggedIn(true);
             //better to use a token for better security, but this works for now
             let hashedPassword = res.data.user.hashedPassword;
@@ -74,11 +74,11 @@ function App() {
             setCookies("password-hash-cookie", hashedPassword, {
               expires: nextMonth,
             });
-          //   setCookies("user-data-cookie", JSON.stringify({
-          //     id: res.data.user.id,
-          //     first_name: res.data.user.first_name,
-          //     last_name: res.data.user.last_name,
-          // }), { expires: nextMonth });
+            //   setCookies("user-data-cookie", JSON.stringify({
+            //     id: res.data.user.id,
+            //     first_name: res.data.user.first_name,
+            //     last_name: res.data.user.last_name,
+            // }), { expires: nextMonth });
             setShowLoginError(false);
             setShowLoginSuccess(true);
             setShowCreateUserSuccess(false);
@@ -88,11 +88,11 @@ function App() {
         .catch((err) => {
           setCookies("username-cookie", "", { expires: nextMonth });
           setCookies("password-hash-cookie", "", { expires: nextMonth });
-        //   setCookies("user-data-cookie", JSON.stringify({
-        //     id: "",
-        //     first_name: "",
-        //     last_name: "",
-        // }), { expires: nextMonth });
+          //   setCookies("user-data-cookie", JSON.stringify({
+          //     id: "",
+          //     first_name: "",
+          //     last_name: "",
+          // }), { expires: nextMonth });
           setShowLoginError(true);
           setShowLoginSuccess(false);
           setShowCreateUserSuccess(false);
@@ -106,7 +106,7 @@ function App() {
     removeCookies("username-cookie");
     removeCookies("passwordRaw-hash-cookie");
     // removeCookies("user-data-cookie");
-    localStorage.removeItem('userData');
+    localStorage.removeItem("userData");
     setShowCreateUserSuccess(false);
     setShowLoginError(false);
     setShowLoginSuccess(false);
@@ -136,13 +136,13 @@ function App() {
   //   }
   // }, [cookies]);
   useEffect(() => {
-    const userDataFromLocalStorage = localStorage.getItem('userData');
+    const userDataFromLocalStorage = localStorage.getItem("userData");
     if (userDataFromLocalStorage) {
       setUserData(JSON.parse(userDataFromLocalStorage));
       setLoggedIn(true);
     }
   }, []);
-  
+
   useEffect(() => {
     const getUsers = async () => {
       axios.get(`${url}/users`).then((userList) => setUsers(userList.data));
@@ -184,23 +184,24 @@ function App() {
     setShowCreateUserSuccess,
     setLoginMessage,
     setShowError,
-    setErrorMessage
+    setErrorMessage,
   };
 
-  const inventoryContext = { items , setItems};
+  const inventoryContext = { items, setItems };
 
   return (
     <div className="App">
       <LoginContext.Provider value={loginContext}>
-      <InventoryContext.Provider value={inventoryContext}>
-        <NavBar loggedIn={loggedIn} />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/profile/:id" element={<Profile />} />
-          <Route path="/inventory" element={<Inventory />} />
-        </Routes>
-        <LoginModal open={loginModalOpen} handleClose={toggleLoginModal} />
-      </InventoryContext.Provider>
+        <InventoryContext.Provider value={inventoryContext}>
+          <NavBar loggedIn={loggedIn} />
+          <Routes>
+            {/* <Route path="/" element={<Home />} /> */}
+            <Route path="/" element={<Navigate replace to="/login" />} />
+            <Route path="/profile/:id" element={<Profile />} />
+            <Route path="/inventory" element={<Inventory />} />
+          </Routes>
+          <LoginModal open={loginModalOpen} handleClose={toggleLoginModal} />
+        </InventoryContext.Provider>
       </LoginContext.Provider>
     </div>
   );
